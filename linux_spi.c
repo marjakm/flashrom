@@ -35,6 +35,14 @@
 #include "programmer.h"
 #include "spi.h"
 
+#define mode_parameter(PARAM) \
+p = extract_programmer_param(#PARAM); \
+if (p && p[0] == '1') { \
+	msg_pdbg("Using " #PARAM "\n"); \
+	mode = mode | PARAM; \
+} \
+free(p);
+
 static int fd = -1;
 
 static int linux_spi_shutdown(void *data);
@@ -45,7 +53,7 @@ static int linux_spi_send_command(struct flashctx *flash, unsigned int writecnt,
 static int linux_spi_read(struct flashctx *flash, uint8_t *buf,
 			  unsigned int start, unsigned int len);
 static int linux_spi_write_256(struct flashctx *flash, const uint8_t *buf,
-			       unsigned int start, unsigned int len);
+			  unsigned int start, unsigned int len);
 
 static const struct spi_master spi_master_linux = {
 	.type		= SPI_CONTROLLER_LINUX,
@@ -62,10 +70,65 @@ int linux_spi_init(void)
 {
 	char *p, *endp, *dev;
 	uint32_t speed_hz = 0;
-	/* FIXME: make the following configurable by CLI options. */
-	/* SPI mode 0 (beware this also includes: MSB first, CS active low and others */
-	const uint8_t mode = SPI_MODE_0;
-	const uint8_t bits = 8;
+	uint8_t mode, bits;
+
+	p = extract_programmer_param("spi_bits");
+	if (p && strlen(p)) {
+		long int bits_choice = strtoul(p, &endp, 10);
+		if (p != endp && 0 <= bits_choice && bits_choice <= 0xff ) {
+			bits = (uint8_t) bits_choice;
+			msg_pdbg("Using SPI word of %d bits\n", bits);
+		} else {
+			msg_perr("%s: invalid spi_bits: %s\n", __func__, p);
+			free(p);
+			return 1;
+		}
+	} else {
+		msg_pdbg("Using default SPI word of 8 bits\n");
+		bits = 8;
+	}
+	free(p);
+
+	p = extract_programmer_param("spi_mode");
+	if (p && strlen(p)) {
+		long int mode_choice = strtoul(p, &endp, 10);
+		if (p != endp && 0 <= mode_choice && mode_choice <= 3 ) {
+			switch(mode_choice) {
+				case 0:
+					msg_pdbg("Using SPI_MODE_0\n");
+					mode = SPI_MODE_0;
+					break;
+				case 1:
+					msg_pdbg("Using SPI_MODE_1\n");
+					mode = SPI_MODE_1;
+					break;
+				case 2:
+					msg_pdbg("Using SPI_MODE_2\n");
+					mode = SPI_MODE_2;
+					break;
+				case 3:
+					msg_pdbg("Using SPI_MODE_3\n");
+					mode = SPI_MODE_3;
+					break;
+			}
+		} else {
+			msg_perr("%s: invalid spi_mode: %s\n", __func__, p);
+			free(p);
+			return 1;
+		}
+	} else {
+		msg_pdbg("Using default SPI_MODE_0\n");
+		mode = SPI_MODE_0;
+	}
+	free(p);
+
+	mode_parameter(SPI_CS_HIGH);
+	mode_parameter(SPI_LSB_FIRST);
+	mode_parameter(SPI_3WIRE);
+	mode_parameter(SPI_LOOP);
+	mode_parameter(SPI_NO_CS);
+	mode_parameter(SPI_READY);
+	msg_pdbg("Computed SPI mode 0x%02x\n", mode);
 
 	p = extract_programmer_param("spispeed");
 	if (p && strlen(p)) {
