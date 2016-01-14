@@ -1,3 +1,9 @@
+flashrom (0.9.8-1mattis) stable; urgency=medium
+
+  * linux_spi: add spi configuration options
+
+ -- Mattis Marjak <mattis.marjak@defendec.com>  Thu, 14 Jan 2016 21:12:20 +0200
+
 flashrom (0.9.7+r1852-1.1) unstable; urgency=medium
 
   * Non-maintainer upload.
