@@ -1,3 +1,9 @@
+flashrom (1.0.0-1mattis) stable; urgency=medium
+
+  * Merge in upstream v1.0 changes
+
+ -- Mattis Marjak <mattis.marjak@defendec.com>  Thu, 18 Jan 2018 21:14:42 +0200
+
 flashrom (0.9.8-1mattis) stable; urgency=medium
 
   * linux_spi: add spi configuration options
