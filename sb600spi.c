@@ -149,6 +149,23 @@ static void determine_generation(struct pci_dev *dev)
 				  "Please report this to flashrom@flashrom.org and include this log and\n"
 				  "the output of lspci -nnvx, thanks!.\n", rev);
 		}
+	} else if (dev->device_id == 0x790e) {
+		struct pci_dev *smbus_dev = pci_dev_find(0x1022, 0x790B);
+		if (smbus_dev == NULL) {
+			msg_pdbg("No SMBus device with ID 1022:790B found.\n");
+			return;
+		}
+		uint8_t rev = pci_read_byte(smbus_dev, PCI_REVISION_ID);
+		if (rev == 0x4a) {
+			amd_gen = CHIPSET_YANGTZE;
+			msg_pdbg("Yangtze detected.\n");
+		} else {
+			msg_pwarn("FCH device found but SMBus revision 0x%02x does not match known values.\n"
+				  "Please report this to flashrom@flashrom.org and include this log and\n"
+				  "the output of lspci -nnvx, thanks!.\n", rev);
+		}
+
+
 #endif
 	} else
 		msg_pwarn("%s: Unknown LPC device %" PRIx16 ":%" PRIx16 ".\n"
@@ -387,24 +404,25 @@ static int set_mode(struct pci_dev *dev, uint8_t read_mode)
 static int handle_speed(struct pci_dev *dev)
 {
 	uint32_t tmp;
-	int8_t spispeed_idx = 3; /* Default to 16.5 MHz */
+	uint8_t spispeed_idx = 3; /* Default to 16.5 MHz */
 
 	char *spispeed = extract_programmer_param("spispeed");
 	if (spispeed != NULL) {
-		if (strcasecmp(spispeed, "reserved") != 0) {
-			int i;
-			for (i = 0; i < ARRAY_SIZE(spispeeds); i++) {
-				if (strcasecmp(spispeeds[i].name, spispeed) == 0) {
-					spispeed_idx = i;
-					break;
-				}
+		unsigned int i;
+		for (i = 0; i < ARRAY_SIZE(spispeeds); i++) {
+			if (strcasecmp(spispeeds[i].name, spispeed) == 0) {
+				spispeed_idx = i;
+				break;
 			}
-			/* Only Yangtze supports the second half of indices; no 66 MHz before SB8xx. */
-			if ((amd_gen < CHIPSET_YANGTZE && spispeed_idx > 3) ||
-			    (amd_gen < CHIPSET_SB89XX && spispeed_idx == 0))
-				spispeed_idx = -1;
 		}
-		if (spispeed_idx < 0) {
+		/* "reserved" is not a valid speed.
+		 * Error out on speeds not present in the spispeeds array.
+		 * Only Yangtze supports the second half of indices.
+		 * No 66 MHz before SB8xx. */
+		if ((strcasecmp(spispeed, "reserved") == 0) ||
+		    (i == ARRAY_SIZE(spispeeds)) ||
+		    (amd_gen < CHIPSET_YANGTZE && spispeed_idx > 3) ||
+		    (amd_gen < CHIPSET_SB89XX && spispeed_idx == 0)) {
 			msg_perr("Error: Invalid spispeed value: '%s'.\n", spispeed);
 			free(spispeed);
 			return 1;
@@ -511,7 +529,7 @@ static int handle_imc(struct pci_dev *dev)
 	msg_pinfo("Writes have been disabled for safety reasons because the presence of the IMC\n"
 		  "was detected and it could interfere with accessing flash memory. Flashrom will\n"
 		  "try to disable it temporarily but even then this might not be safe:\n"
-		  "when it is reenabled and after a reboot it expects to find working code\n"
+		  "when it is re-enabled and after a reboot it expects to find working code\n"
 		  "in the flash and it is unpredictable what happens if there is none.\n"
 		  "\n"
 		  "To be safe make sure that there is a working IMC firmware at the right\n"
@@ -645,12 +663,13 @@ int sb600_probe_spi(struct pci_dev *dev)
 
 	/* Look for the SMBus device. */
 	smbus_dev = pci_dev_find(0x1002, 0x4385);
-	if (!smbus_dev) {
+	if (!smbus_dev)
 		smbus_dev = pci_dev_find(0x1022, 0x780b); /* AMD FCH */
-		if (!smbus_dev) {
-			msg_perr("ERROR: SMBus device not found. Not enabling SPI.\n");
-			return ERROR_NONFATAL;
-		}
+	if (!smbus_dev)
+		smbus_dev = pci_dev_find(0x1022, 0x790b); /* AMD FP4 */
+	if (!smbus_dev) {
+		msg_perr("ERROR: SMBus device not found. Not enabling SPI.\n");
+		return ERROR_NONFATAL;
 	}
 
 	/* Note about the bit tests below: If a bit is zero, the GPIO is SPI. */

@@ -131,6 +131,7 @@ int register_superio(struct superio s)
 int is_laptop = 0;
 int laptop_ok = 0;
 
+#if (IS_X86 || IS_MIPS) && defined(__FLASHROM_LITTLE_ENDIAN__)
 static void internal_chip_writeb(const struct flashctx *flash, uint8_t val,
 				 chipaddr addr);
 static void internal_chip_writew(const struct flashctx *flash, uint16_t val,
@@ -155,6 +156,7 @@ static const struct par_master par_master_internal = {
 		.chip_writel		= internal_chip_writel,
 		.chip_writen		= fallback_chip_writen,
 };
+#endif
 
 enum chipbustype internal_buses_supported = BUS_NONE;
 
@@ -296,7 +298,7 @@ int internal_init(void)
 		msg_perr("Laptops, notebooks and netbooks are difficult to support and we\n"
 			 "recommend to use the vendor flashing utility. The embedded controller\n"
 			 "(EC) in these machines often interacts badly with flashing.\n"
-			 "See the manpage and http://www.flashrom.org/Laptops for details.\n\n"
+			 "See the manpage and https://flashrom.org/Laptops for details.\n\n"
 			 "If flash is shared with the EC, erase is guaranteed to brick your laptop\n"
 			 "and write may brick your laptop.\n"
 			 "Read and probe may irritate your EC and cause fan failure, backlight\n"
@@ -358,6 +360,7 @@ int internal_init(void)
 }
 #endif
 
+#if (IS_X86 || IS_MIPS) && defined(__FLASHROM_LITTLE_ENDIAN__)
 static void internal_chip_writeb(const struct flashctx *flash, uint8_t val,
 				 chipaddr addr)
 {
@@ -400,3 +403,4 @@ static void internal_chip_readn(const struct flashctx *flash, uint8_t *buf,
 	mmio_readn((void *)addr, buf, len);
 	return;
 }
+#endif

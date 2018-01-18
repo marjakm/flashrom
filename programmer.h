@@ -57,6 +57,9 @@ enum programmer {
 #if CONFIG_ATAVIA == 1
 	PROGRAMMER_ATAVIA,
 #endif
+#if CONFIG_ATAPROMISE == 1
+	PROGRAMMER_ATAPROMISE,
+#endif
 #if CONFIG_IT8212 == 1
 	PROGRAMMER_IT8212,
 #endif
@@ -104,6 +107,9 @@ enum programmer {
 #endif
 #if CONFIG_PICKIT2_SPI == 1
 	PROGRAMMER_PICKIT2_SPI,
+#endif
+#if CONFIG_CH341A_SPI == 1
+	PROGRAMMER_CH341A_SPI,
 #endif
 	PROGRAMMER_INVALID /* This must always be the last entry. */
 };
@@ -189,6 +195,11 @@ uintptr_t pcidev_readbar(struct pci_dev *dev, int bar);
 struct pci_dev *pcidev_init(const struct dev_entry *devs, int bar);
 /* rpci_write_* are reversible writes. The original PCI config space register
  * contents will be restored on shutdown.
+ * To clone the pci_dev instances internally, the `pacc` global
+ * variable has to reference a pci_access method that is compatible
+ * with the given pci_dev handle. The referenced pci_access (not
+ * the variable) has to stay valid until the shutdown handlers are
+ * finished.
  */
 int rpci_write_byte(struct pci_dev *dev, int reg, uint8_t data);
 int rpci_write_word(struct pci_dev *dev, int reg, uint16_t data);
@@ -302,7 +313,7 @@ void cleanup_cpu_msr(void);
 
 /* cbtable.c */
 int cb_parse_table(const char **vendor, const char **model);
-int cb_check_image(uint8_t *bios, int size);
+int cb_check_image(const uint8_t *bios, int size);
 
 /* dmi.c */
 #if defined(__i386__) || defined(__x86_64__)
@@ -345,16 +356,16 @@ int internal_init(void);
 void mmio_writeb(uint8_t val, void *addr);
 void mmio_writew(uint16_t val, void *addr);
 void mmio_writel(uint32_t val, void *addr);
-uint8_t mmio_readb(void *addr);
-uint16_t mmio_readw(void *addr);
-uint32_t mmio_readl(void *addr);
-void mmio_readn(void *addr, uint8_t *buf, size_t len);
+uint8_t mmio_readb(const void *addr);
+uint16_t mmio_readw(const void *addr);
+uint32_t mmio_readl(const void *addr);
+void mmio_readn(const void *addr, uint8_t *buf, size_t len);
 void mmio_le_writeb(uint8_t val, void *addr);
 void mmio_le_writew(uint16_t val, void *addr);
 void mmio_le_writel(uint32_t val, void *addr);
-uint8_t mmio_le_readb(void *addr);
-uint16_t mmio_le_readw(void *addr);
-uint32_t mmio_le_readl(void *addr);
+uint8_t mmio_le_readb(const void *addr);
+uint16_t mmio_le_readw(const void *addr);
+uint32_t mmio_le_readl(const void *addr);
 #define pci_mmio_writeb mmio_le_writeb
 #define pci_mmio_writew mmio_le_writew
 #define pci_mmio_writel mmio_le_writel
@@ -460,6 +471,13 @@ void *atavia_map(const char *descr, uintptr_t phys_addr, size_t len);
 extern const struct dev_entry ata_via[];
 #endif
 
+/* atapromise.c */
+#if CONFIG_ATAPROMISE == 1
+int atapromise_init(void);
+void *atapromise_map(const char *descr, uintptr_t phys_addr, size_t len);
+extern const struct dev_entry ata_promise[];
+#endif
+
 /* it8212.c */
 #if CONFIG_IT8212 == 1
 int it8212_init(void);
@@ -486,6 +504,7 @@ int mstarddc_spi_init(void);
 /* pickit2_spi.c */
 #if CONFIG_PICKIT2_SPI == 1
 int pickit2_spi_init(void);
+extern const struct dev_entry devs_pickit2_spi[];
 #endif
 
 /* rayer_spi.c */
@@ -514,6 +533,14 @@ int linux_spi_init(void);
 /* dediprog.c */
 #if CONFIG_DEDIPROG == 1
 int dediprog_init(void);
+extern const struct dev_entry devs_dediprog[];
+#endif
+
+/* ch341a_spi.c */
+#if CONFIG_CH341A_SPI == 1
+int ch341a_spi_init(void);
+void ch341a_spi_delay(unsigned int usecs);
+extern const struct dev_entry devs_ch341a_spi[];
 #endif
 
 /* flashrom.c */
@@ -575,6 +602,9 @@ enum spi_controller {
 #if CONFIG_PICKIT2_SPI == 1
 	SPI_CONTROLLER_PICKIT2,
 #endif
+#if CONFIG_CH341A_SPI == 1
+	SPI_CONTROLLER_CH341A_SPI,
+#endif
 };
 
 #define MAX_DATA_UNSPECIFIED 0
@@ -582,8 +612,8 @@ enum spi_controller {
 #define MAX_DATA_WRITE_UNLIMITED 256
 struct spi_master {
 	enum spi_controller type;
-	unsigned int max_data_read;
-	unsigned int max_data_write;
+	unsigned int max_data_read; // (Ideally,) maximum data read size in one go (excluding opcode+address).
+	unsigned int max_data_write; // (Ideally,) maximum data write size in one go (excluding opcode+address).
 	int (*command)(struct flashctx *flash, unsigned int writecnt, unsigned int readcnt,
 		   const unsigned char *writearr, unsigned char *readarr);
 	int (*multicommand)(struct flashctx *flash, struct spi_command *cmds);
@@ -624,13 +654,16 @@ enum ich_chipset {
 	CHIPSET_8_SERIES_LYNX_POINT_LP,
 	CHIPSET_8_SERIES_WELLSBURG,
 	CHIPSET_9_SERIES_WILDCAT_POINT,
+	CHIPSET_9_SERIES_WILDCAT_POINT_LP,
+	CHIPSET_100_SERIES_SUNRISE_POINT, /* also 6th/7th gen Core i/o (LP) variants */
+	CHIPSET_C620_SERIES_LEWISBURG,
 };
 
 /* ichspi.c */
 #if CONFIG_INTERNAL == 1
 extern uint32_t ichspi_bbar;
-int ich_init_spi(struct pci_dev *dev, void *spibar, enum ich_chipset ich_generation);
-int via_init_spi(struct pci_dev *dev, uint32_t mmio_base);
+int ich_init_spi(void *spibar, enum ich_chipset ich_generation);
+int via_init_spi(uint32_t mmio_base);
 
 /* amd_imc.c */
 int amd_imc_shutdown(struct pci_dev *dev);

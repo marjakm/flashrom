@@ -35,6 +35,11 @@
 #include "programmer.h"
 #include "spi.h"
 
+/* Devices known to work with this module (FIXME: export as struct dev_entry):
+ * Beagle Bone Black
+ * Raspberry Pi
+ * HummingBoard
+ */
 #define mode_parameter(PARAM) \
 p = extract_programmer_param(#PARAM); \
 if (p && p[0] == '1') { \

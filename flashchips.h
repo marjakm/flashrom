@@ -64,9 +64,9 @@
 #define AMD_AM29F004BB		0x7B
 #define AMD_AM29F004BT		0x77
 #define AMD_AM29F016D		0xAD
-#define AMD_AM29F010B		0x20	/* Same as Am29F010A */
-#define AMD_AM29F040B		0xA4
-#define AMD_AM29F080B		0xD5
+#define AMD_AM29F010		0x20	/* Same as Am29F010A and Am29F010B */
+#define AMD_AM29F040		0xA4	/* Same as AM29F040B */
+#define AMD_AM29F080		0xD5	/* Same as Am29F080B */
 #define AMD_AM29F200BB		0x57
 #define AMD_AM29F200BT		0x51
 #define AMD_AM29F400BB		0xAB
@@ -371,7 +371,11 @@
 #define GIGADEVICE_GD25Q16	0x4015	/* Same as GD25Q16B (which has OTP) */
 #define GIGADEVICE_GD25Q32	0x4016	/* Same as GD25Q32B */
 #define GIGADEVICE_GD25Q64	0x4017	/* Same as GD25Q64B */
-#define GIGADEVICE_GD25Q128	0x4018	/* GD25Q128B only? */
+#define GIGADEVICE_GD25Q128	0x4018	/* GD25Q128B and GD25Q128C only, can be distinguished by SFDP */
+#define GIGADEVICE_GD25VQ21B	0x4212
+#define GIGADEVICE_GD25VQ41B	0x4213  /* Same as GD25VQ40C, can be distinguished by SFDP */
+#define GIGADEVICE_GD25VQ80C	0x4214
+#define GIGADEVICE_GD25VQ16C	0x4215
 #define GIGADEVICE_GD25LQ40	0x6013
 #define GIGADEVICE_GD25LQ80	0x6014
 #define GIGADEVICE_GD25LQ16	0x6015
@@ -744,9 +748,9 @@
  */
 #define ST_ID			0x20	/* ST / SGS/Thomson / Numonyx (later acquired by Micron) */
 #define ST_M25P05A		0x2010
-#define ST_M25P05_RES		0x10	/* Same code as M25P10. */
+#define ST_M25P05_RES		0x05
 #define ST_M25P10A		0x2011
-#define ST_M25P10_RES		0x10	/* Same code as M25P05. */
+#define ST_M25P10_RES		0x10
 #define ST_M25P20		0x2012
 #define ST_M25P20_RES		0x11
 #define ST_M25P40		0x2013
@@ -847,6 +851,9 @@
 #define ST_N25Q512__3E		0xBA20	/* N25Q512, 3.0V, (uniform sectors expected) */
 #define ST_N25Q512__1E		0xBB20	/* N25Q512, 1.8V, (uniform sectors expected) */
 #define ST_N25Q00A__3E		0xBA21	/* N25Q00A, 3.0V, (uniform sectors expected) */
+#define ST_NP5Q032		0xDA16	/* Phase-change memory (PCM), 3V */
+#define ST_NP5Q064		0xDA17	/* Phase-change memory (PCM), 3V */
+#define ST_NP5Q128		0xDA18	/* Phase-change memory (PCM), 3V */
 
 #define SYNCMOS_MVC_ID		0x40	/* SyncMOS (SM) and Mosel Vitelic Corporation (MVC) */
 #define MVC_V29C51000T		0x00
@@ -899,7 +906,7 @@
 #define WINBOND_NEX_W25Q16_W	0x6015	/* W25Q16DW */
 #define WINBOND_NEX_W25Q32_W	0x6016	/* W25Q32DW; W25Q32FV in QPI mode */
 #define WINBOND_NEX_W25Q64_W	0x6017	/* W25Q64DW; W25Q64FV in QPI mode */
-#define WINBOND_NEX_W25Q128_W	0x6018	/* (No W version known) W25Q128FV in QPI mode */
+#define WINBOND_NEX_W25Q128_W	0x6018	/* W25Q128FW; W25Q128FV in QPI mode */
 
 #define WINBOND_ID		0xDA	/* Winbond */
 #define WINBOND_W19B160BB	0x49

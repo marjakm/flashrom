@@ -55,6 +55,12 @@
 #include "programmer.h"
 #include "spi.h"
 
+const struct dev_entry devs_pickit2_spi[] = {
+	{0x04D8, 0x0033, OK, "Microchip", "PICkit 2"},
+
+	{}
+};
+
 static usb_dev_handle *pickit2_handle;
 
 /* Default USB transaction timeout in ms */
@@ -63,9 +69,6 @@ static usb_dev_handle *pickit2_handle;
 #define CMD_LENGTH              64
 #define ENDPOINT_OUT            0x01
 #define ENDPOINT_IN             0x81
-
-#define PICKIT2_VID             0x04D8
-#define PICKIT2_PID             0x0033
 
 #define CMD_GET_VERSION         0x76
 #define CMD_SET_VDD             0xA0
@@ -95,9 +98,8 @@ static usb_dev_handle *pickit2_handle;
 #define SCR_VDD_OFF             0xFE
 #define SCR_VDD_ON              0xFF
 
-/* Copied from dediprog.c */
-/* Might be useful for other USB devices as well. static for now. */
-/* device parameter allows user to specify one device of multiple installed */
+/* Might be useful for other USB devices as well. static for now.
+ * device parameter allows user to specify one device of multiple installed */
 static struct usb_device *get_device_by_vid_pid(uint16_t vid, uint16_t pid, unsigned int device)
 {
 	struct usb_bus *bus;
@@ -398,7 +400,7 @@ static int pickit2_shutdown(void *data)
 
 int pickit2_spi_init(void)
 {
-	unsigned int usedevice = 0; // FIXME: allow to select one of multiple devices
+	unsigned int usedevice = 0; // FIXME: Allow selecting one of multiple devices
 
 	uint8_t buf[CMD_LENGTH] = {
 		CMD_EXEC_SCRIPT,
@@ -449,7 +451,9 @@ int pickit2_spi_init(void)
 	usb_init();
 	(void)usb_find_busses();
 	(void)usb_find_devices();
-	struct usb_device *dev = get_device_by_vid_pid(PICKIT2_VID, PICKIT2_PID, usedevice);
+	const uint16_t vid = devs_pickit2_spi[0].vendor_id;
+	const uint16_t pid = devs_pickit2_spi[0].device_id;
+ 	struct usb_device *dev = get_device_by_vid_pid(vid, pid, usedevice);
 	if (dev == NULL) {
 		msg_perr("Could not find a PICkit2 on USB!\n");
 		return 1;
